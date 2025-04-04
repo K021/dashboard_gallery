@@ -25,7 +25,6 @@ export function GroupCard({ group, meta, thumbPath }: GroupCardProps) {
           <Image
             src={thumbPath}
             alt={meta.title}
-            layout="intrinsic"
             width={300}
             height={500}
             className="max-h-full w-full object-contain transition-transform duration-300 hover:scale-105"
