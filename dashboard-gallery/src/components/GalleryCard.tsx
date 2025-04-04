@@ -22,7 +22,7 @@ export function GalleryCard({ group, meta, thumbPath, imageCount }: GalleryCardP
   return (
     <Link href={`/gallery/${encodeURIComponent(group)}/${encodeURIComponent(meta.hash)}`} className="block">
       <Card className="
-        rounded-xl border border-border shadow-xl 
+        max-w-[500px] rounded-xl border border-border shadow-xl 
         hover:shadow-2xl hover:ring-1 hover:ring-accent/50 transition-all 
         overflow-hidden dark:bg-zinc-900 dark:shadow-[0px_5px_20px_rgba(255,255,255,0.15)]
       ">
