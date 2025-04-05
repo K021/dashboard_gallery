@@ -23,34 +23,40 @@ function getGalleryList(slug: string): GalleryCardProps[] {
 
     // 초기 기본 이미지 탐색
     let thumbFolder = folderPath;
-    let imageFiles = fs
+    let thumbnails = fs
       .readdirSync(thumbFolder)
-      .filter((f) => f.match(/\.(jpg|jpeg|png)$/i));
+      .filter((f) => f.match(/thumbnail\.(jpg|jpeg|png)$/i));
+    let imageFiles: string[] = [];
 
-    // 없으면 photos 하위 폴더 fallback
-    if (imageFiles.length === 0) {
-      const photosPath = path.join(folderPath, "photos");
-      if (fs.existsSync(photosPath)) {
-        const fallbackImages = fs
-          .readdirSync(photosPath)
-          .filter((f) => f.match(/\.(jpg|jpeg|png)$/i));
-        if (fallbackImages.length > 0) {
-          thumbFolder = photosPath;
-          imageFiles = fallbackImages;
-        }
+    // photos 하위 폴더 fallback
+    const photosPath = path.join(folderPath, "photos");
+    if (fs.existsSync(photosPath)) {
+      const fallbackImages = fs
+        .readdirSync(photosPath)
+        .filter((f) => f.match(/\.(jpg|jpeg|png)$/i));
+      if (fallbackImages.length > 0) {
+        imageFiles = fallbackImages;
       }
     }
 
-    // 그래도 없으면 스킵
-    if (imageFiles.length === 0) {
+    // 썸네일 또는 하위 이미지가 없는 경우 제외
+    if (thumbnails.length === 0 && imageFiles.length === 0) {
       console.warn(`⚠️ 썸네일 이미지 없음: ${folderPath}`);
       continue;
     }
 
-    const relativeThumbPath = path.relative(
-      path.join(process.cwd(), "public"),
-      path.join(thumbFolder, imageFiles[0])
-    );
+    let relativeThumbPath = "";
+    if (thumbnails.length > 0) {
+      relativeThumbPath = path.relative(
+        path.join(process.cwd(), "public"),
+        path.join(thumbFolder, thumbnails[0])
+      );
+    } else {
+      relativeThumbPath = path.relative(
+        path.join(process.cwd(), "public"),
+        path.join(photosPath, imageFiles[0])
+      );
+    }
     const thumbPath = `/${relativeThumbPath.replaceAll(path.sep, "/")}`;
 
     galleries.push({
