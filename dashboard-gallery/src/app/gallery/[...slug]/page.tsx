@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import ImageViewer from "@/components/ImageViewer";
 import Link from "next/link";  // Add the import at the top
 import Image from "next/image";
+import Selecto from "react-selecto"; // 상단 import 추가
 
 export default function GalleryDetailPage() {
   const { slug } = useParams<{ slug: string[] }>();
@@ -15,6 +16,7 @@ export default function GalleryDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
 
   useEffect(() => {
     if (!slug || !Array.isArray(slug)) return;
@@ -31,6 +33,7 @@ export default function GalleryDetailPage() {
         setImages(data.images);
         setLikes(data.likes || []);
         setTitle(data.title);
+        setSelectedImages([]);
       } catch (err: any) {
         setError(err.message || "Error loading gallery");
       }
@@ -38,6 +41,36 @@ export default function GalleryDetailPage() {
 
     load();
   }, [slug]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Backspace" && selectedImages.length > 0) {
+        if (confirm(`${selectedImages.length}개 이미지를 삭제할까요?`)) {
+          fetch("/api/delete-images", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              slug: slug.join("/"),
+              filenames: selectedImages.map((src) => src.split("/").pop()),
+            }),
+          }).then(() => {
+            setImages((prev) => prev.filter((img) => !selectedImages.includes(img)));
+            setSelectedImages([]);
+          });
+        }
+      } else if (e.key === "Escape") {
+        console.log("Escape key pressed");
+        setSelectedImages([]);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedImages]);
 
   useEffect(() => {
     console.log("✅ likes 변경됨:", likes);
@@ -60,25 +93,90 @@ export default function GalleryDetailPage() {
         </h1>
         <ThemeToggle />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 !pt-[62px] !px-4 !pb-4">
-        {images.map((src, i) => (
-          <div className="relative group" key={i}>
-            <Image
-              src={src}
-              alt={`Image ${i + 1}`}
-              width={800}
-              height={1200}
-              className="w-full h-auto rounded-lg shadow cursor-pointer object-contain"
-              onClick={() => {
-                setCurrentIndex(i);
-                setViewerOpen(true);
-              }}
-            />
-            {likes.includes(src.split("/").pop()!) && (
-              <div className="absolute top-2 right-2 text-red-500 text-xl">❤️</div>
-            )}
+      <div tabIndex={0} id="focus-catcher" className="sr-only" />
+      {selectedImages.length > 0 && (
+        <button
+          onClick={async () => {
+            if (confirm(`${selectedImages.length}개 이미지를 삭제할까요?`)) {
+              await fetch("/api/delete-images", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  slug: slug.join("/"),
+                  filenames: selectedImages.map((src) => src.split("/").pop()),
+                }),
+              });
+              setImages((prev) => prev.filter((img) => !selectedImages.includes(img)));
+              setSelectedImages([]);
+            }
+          }}
+          className="fixed bottom-2 right-2 z-50 bg-destructive text-white px-3 py-1 rounded shadow hover:opacity-80"
+        >
+          <div className="inline-block !my-1.5 !mx-2">
+            삭제하기
           </div>
-        ))}
+        </button>
+      )}
+      <div className="relative">
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 !pt-[62px] !px-4 !pb-4"
+          id="image-grid"
+        >
+          {images.map((src, i) => (
+            <div className="relative group selectable" key={i} data-src={src}>
+              <input
+                type="checkbox"
+                checked={selectedImages.includes(src)}
+                onChange={() => {
+                  setSelectedImages((prev) =>
+                    prev.includes(src) ? prev.filter((s) => s !== src) : [...prev, src]
+                  );
+                }}
+                className="absolute top-2 left-2 z-10 w-5 h-5"
+              />
+              <Image
+                src={src}
+                alt={`Image ${i + 1}`}
+                width={800}
+                height={1200}
+                className="w-full h-auto rounded-lg shadow cursor-pointer object-contain"
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSelectedImages((prev) =>
+                      prev.includes(src) ? prev.filter((s) => s !== src) : [...prev, src]
+                    );
+                  } else {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    document.getElementById("focus-catcher")?.focus();
+                    setCurrentIndex(i);
+                    setViewerOpen(true);
+                  }
+                }}
+              />
+              {likes.includes(src.split("/").pop()!) && (
+                <div className="absolute top-2 right-2 text-red-500 text-xl">❤️</div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <Selecto
+          container={typeof window !== "undefined" ? document.body : undefined}
+          selectableTargets={[".selectable"]}
+          hitRate={30}
+          selectByClick={false}
+          selectFromInside={false}
+          toggleContinueSelect={["shift"]}
+          onSelectEnd={(e) => {
+            const selected = e.selected.map((el) => el.getAttribute("data-src")!).filter(Boolean);
+            setSelectedImages(selected);
+          }}
+        />
       </div>
       {viewerOpen && (
         <ImageViewer
