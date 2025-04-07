@@ -30,8 +30,6 @@ function getGroupList(): GroupCardProps[] {
       thumbnailPath = path.join(folderPath, "thumbnail.jpeg");
     }
 
-    console.log("thumbnailPath", thumbnailPath);
-
     // 그래도 없으면 스킵
     if (!fs.existsSync(thumbnailPath)) {
       console.warn(`⚠️ 썸네일 이미지 없음: ${folderPath}`);

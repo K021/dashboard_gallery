@@ -161,6 +161,29 @@ export default function ImageViewer({
       >
         📂
       </button>
+      <button
+        title="썸네일로 설정"
+        className="absolute bottom-4 right-16 text-white text-xl hover:text-gray-300 transition"
+        onClick={(e) => {
+          e.stopPropagation();
+          const filename = images[currentIndex].split("/").pop() || "";
+          if (!filename) {
+            console.error("❌ 파일 이름이 비어 있습니다. 썸네일 설정 중단");
+            return;
+          }
+          const slugPath = Array.isArray(slug) ? slug.join("/") : slug;
+          const filePath = `/downloaded_images/${slugPath}/photos/${filename}`;
+          fetch("/api/set-thumbnail", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ slug: slugPath, filename }),
+          });
+        }}
+      >
+        🖼️
+      </button>
     </div>,
     document.body
   );
